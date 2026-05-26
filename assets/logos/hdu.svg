@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="杭州电子科技大学占位Logo">
+  <rect width="300" height="300" rx="42" fill="#eff6ff"/>
+  <circle cx="150" cy="150" r="108" fill="#ffffff" stroke="#0284c7" stroke-width="18"/>
+  <circle cx="150" cy="150" r="72" fill="#dbeafe" stroke="#38bdf8" stroke-width="6"/>
+  <path d="M95 183h110M103 151h94M119 119h62M150 86v128" fill="none" stroke="#0369a1" stroke-width="10" stroke-linecap="round"/>
+  <text x="150" y="232" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="40" font-weight="900" fill="#075985">杭电</text>
+</svg>

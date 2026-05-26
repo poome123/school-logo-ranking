@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="西安电子科技大学占位Logo">
+  <rect width="300" height="300" rx="42" fill="#f0f9ff"/>
+  <circle cx="150" cy="150" r="108" fill="#ffffff" stroke="#2563eb" stroke-width="18"/>
+  <circle cx="150" cy="150" r="72" fill="#dbeafe" stroke="#3b82f6" stroke-width="6"/>
+  <path d="M78 150c42-58 102-58 144 0-42 58-102 58-144 0Z" fill="none" stroke="#1d4ed8" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="150" cy="150" r="16" fill="#1d4ed8"/>
+  <text x="150" y="231" text-anchor="middle" font-family="Microsoft YaHei, sans-serif" font-size="40" font-weight="900" fill="#1e3a8a">西电</text>
+</svg>
