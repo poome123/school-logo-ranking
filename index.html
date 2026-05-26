@@ -3,45 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>电子通信考研院校锐评</title>
+    <title>电子通信考研院校难度精细排名</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body>
     <main class="app-shell">
       <section class="top-panel" data-live-hidden>
-        <div>
+        <div class="title-block">
           <p class="eyebrow">电子通信考研院校 Logo 拖拽锐评工具</p>
-          <h1>电子通信考研院校锐评</h1>
-          <p class="hint">把底部待评价区的学校 Logo 拖到任意档位，同一档位内也可以调整顺序。刷新后会自动保留当前结果。</p>
+          <h1>电子通信考研院校难度精细排名</h1>
+          <p class="hint">拖动学校 Logo 到横向坐标轴任意位置，越靠左难度越高，越靠右越轻松。刷新后自动保留当前结果。</p>
         </div>
         <div class="controls" aria-label="控制按钮">
-          <button class="control-btn" id="resetBtn" type="button">重置锐评</button>
+          <button class="control-btn" id="resetBtn" type="button">重置排名</button>
+          <button class="control-btn" id="arrangeBtn" type="button">自动整理</button>
+          <button class="control-btn" id="exportBtn" type="button">导出排名</button>
           <button class="control-btn" id="liveBtn" type="button">直播模式</button>
           <button class="control-btn primary" id="fullscreenBtn" type="button">全屏展示</button>
         </div>
       </section>
 
-      <section class="rank-canvas" aria-label="电子通信考研院校锐评榜">
+      <section class="rank-canvas" aria-label="电子通信考研院校难度精细排名看板">
         <div class="canvas-header">
           <div>
-            <p class="canvas-kicker">LIVE RANKING BOARD</p>
-            <h2>电子通信考研院校锐评</h2>
+            <p class="canvas-kicker">LIVE PRECISION BOARD</p>
+            <h2>电子通信考研院校难度精细排名</h2>
           </div>
           <div class="save-status" id="saveStatus">自动保存已开启</div>
         </div>
 
-        <div class="tier-board" id="tierBoard"></div>
+        <section class="precision-board" aria-label="横向连续排名坐标轴">
+          <div class="axis-labels" id="axisLabels"></div>
+          <div class="rank-surface" id="rankSurface" aria-label="主榜单区域">
+            <div class="surface-note left">难度高</div>
+            <div class="surface-note right">越靠右越拉</div>
+          </div>
+        </section>
 
         <section class="pool-zone" aria-label="待评价区">
           <div class="pool-title">
             <span>待评价区</span>
-            <small>新增学校会自动出现在这里</small>
+            <small>未上榜学校先放这里</small>
           </div>
-          <div class="school-list pool-list" id="poolList" data-zone-id="pool"></div>
+          <div class="school-list pool-list" id="poolList"></div>
         </section>
       </section>
     </main>
+
+    <dialog class="export-dialog" id="exportDialog">
+      <form method="dialog" class="export-card">
+        <div class="export-head">
+          <h3>当前排名</h3>
+          <button class="icon-close" type="submit" aria-label="关闭">×</button>
+        </div>
+        <textarea id="exportText" readonly></textarea>
+        <div class="export-actions">
+          <button class="control-btn" id="copyExportBtn" type="button">复制结果</button>
+          <button class="control-btn primary" type="submit">关闭</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>
