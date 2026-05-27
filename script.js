@@ -59,6 +59,7 @@ const EDGE_PADDING = 12;
 
 const axisLabels = document.querySelector("#axisLabels");
 const rankSurface = document.querySelector("#rankSurface");
+const poolZone = document.querySelector(".pool-zone");
 const poolList = document.querySelector("#poolList");
 const resetBtn = document.querySelector("#resetBtn");
 const arrangeBtn = document.querySelector("#arrangeBtn");
@@ -291,13 +292,14 @@ function handlePointerDown(event) {
 function handlePointerMove(event) {
   if (!draggedCard) return;
 
-  const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
-  const overSurface = Boolean(elementBelow?.closest("#rankSurface"));
-  const overPool = Boolean(elementBelow?.closest("#poolList"));
+  const overSurface = isPointInside(rankSurface, event.clientX, event.clientY);
+  const overPool = isPointInside(poolZone, event.clientX, event.clientY);
   rankSurface.classList.toggle("is-active-drop", overSurface);
   poolList.classList.toggle("is-active-drop", overPool);
 
-  if (overSurface || draggedCard.parentElement === rankSurface) {
+  if (overPool) return;
+
+  if (overSurface || (draggedCard.parentElement === rankSurface && !overPool)) {
     moveCardToSurface(event.clientX, event.clientY);
   }
 }
@@ -305,12 +307,11 @@ function handlePointerMove(event) {
 function handlePointerUp(event) {
   if (!draggedCard) return;
 
-  const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
-  const droppedInPool = Boolean(elementBelow?.closest("#poolList"));
-  const droppedInSurface = Boolean(elementBelow?.closest("#rankSurface")) || draggedCard.parentElement === rankSurface;
+  const droppedInPool = isPointInside(poolZone, event.clientX, event.clientY);
+  const droppedInSurface = isPointInside(rankSurface, event.clientX, event.clientY) || draggedCard.parentElement === rankSurface;
   const schoolId = draggedCard.dataset.schoolId;
 
-  if (droppedInPool && draggedCard.parentElement === rankSurface) {
+  if (droppedInPool) {
     moveCardToPool(draggedCard);
     delete currentState.placed[schoolId];
     addToPool(schoolId);
@@ -348,6 +349,11 @@ function moveCardToPool(card) {
   card.style.left = "";
   card.style.top = "";
   poolList.appendChild(card);
+}
+
+function isPointInside(element, x, y) {
+  const rect = element.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
 function placeCard(card, xPercent, yPercent) {
