@@ -79,6 +79,27 @@ let dragPointerOffset = { x: 0, y: 0 };
 let saveTimer = null;
 let resizeTimer = null;
 
+function initApp() {
+  render();
+  resetBtn.addEventListener("click", resetRanking);
+  arrangeBtn.addEventListener("click", autoArrange);
+  exportBtn.addEventListener("click", exportRanking);
+  copyExportBtn.addEventListener("click", copyExportText);
+  liveBtn.addEventListener("click", toggleLiveMode);
+  fullscreenBtn.addEventListener("click", toggleFullscreen);
+}
+
+function showStartupError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  saveStatus.textContent = "脚本启动失败";
+  poolList.innerHTML = `
+    <div class="startup-error">
+      页面脚本没有正常启动：${message}
+    </div>
+  `;
+  console.error(error);
+}
+
 function getDefaultState() {
   return {
     pool: schools.map((school) => school.id),
@@ -482,11 +503,12 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-resetBtn.addEventListener("click", resetRanking);
-arrangeBtn.addEventListener("click", autoArrange);
-exportBtn.addEventListener("click", exportRanking);
-copyExportBtn.addEventListener("click", copyExportText);
-liveBtn.addEventListener("click", toggleLiveMode);
-fullscreenBtn.addEventListener("click", toggleFullscreen);
-
-render();
+try {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp, { once: true });
+  } else {
+    initApp();
+  }
+} catch (error) {
+  showStartupError(error);
+}
