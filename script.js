@@ -77,6 +77,8 @@ let currentState = getDefaultState();
 let draggedCard = null;
 let dragOrigin = null;
 let dragPointerOffset = { x: 0, y: 0 };
+let dragStartPosition = null;
+let poolPlaceholder = null;
 let saveTimer = null;
 let resizeTimer = null;
 
@@ -147,6 +149,41 @@ function migrateLegacyState() {
 }
 
 function normalizeState(rawState) {
+  if (isStatusMapState(rawState)) return normalizeStatusMapState(rawState);
+  return normalizeListState(rawState);
+}
+
+function isStatusMapState(rawState) {
+  if (!rawState || Array.isArray(rawState) || Array.isArray(rawState.pool) || rawState.placed) return false;
+  return Object.values(rawState).some((value) => value?.status === "ranked" || value?.status === "unranked");
+}
+
+function normalizeStatusMapState(rawState) {
+  const knownIds = new Set(schools.map((school) => school.id));
+  const seen = new Set();
+  const state = { pool: [], placed: {} };
+
+  Object.entries(rawState || {}).forEach(([schoolId, value]) => {
+    if (!knownIds.has(schoolId) || seen.has(schoolId)) return;
+    if (value?.status === "ranked") {
+      state.placed[schoolId] = {
+        x: clamp(Number(value.x) || 0, 0, 100),
+        y: clamp(Number(value.y) || 0, 0, 100),
+      };
+    } else {
+      state.pool.push(schoolId);
+    }
+    seen.add(schoolId);
+  });
+
+  schools.forEach((school) => {
+    if (!seen.has(school.id)) state.pool.push(school.id);
+  });
+
+  return state;
+}
+
+function normalizeListState(rawState) {
   const knownIds = new Set(schools.map((school) => school.id));
   const seen = new Set();
   const state = { pool: [], placed: {} };
@@ -175,8 +212,25 @@ function normalizeState(rawState) {
 }
 
 function saveState(showStatus = true) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeStateForStorage()));
   if (showStatus) flashSaveStatus();
+}
+
+function serializeStateForStorage() {
+  return Object.fromEntries(
+    schools.map((school) => {
+      const position = currentState.placed[school.id];
+      if (!position) return [school.id, { status: "unranked" }];
+      return [
+        school.id,
+        {
+          status: "ranked",
+          x: position.x,
+          y: position.y,
+        },
+      ];
+    })
+  );
 }
 
 function flashSaveStatus() {
@@ -272,9 +326,11 @@ function createSchoolCard(school) {
 
 function handlePointerDown(event) {
   if (event.button !== 0) return;
+  if (draggedCard) return;
 
   draggedCard = event.currentTarget;
   dragOrigin = draggedCard.parentElement === rankSurface ? "surface" : "pool";
+  dragStartPosition = currentState.placed[draggedCard.dataset.schoolId] || null;
 
   const cardRect = draggedCard.getBoundingClientRect();
   dragPointerOffset = {
@@ -282,25 +338,39 @@ function handlePointerDown(event) {
     y: event.clientY - cardRect.top,
   };
 
+  ensurePoolPlaceholder();
+  if (dragOrigin === "pool") {
+    poolList.insertBefore(poolPlaceholder, draggedCard.nextSibling);
+  }
+
   draggedCard.classList.add("is-dragging");
-  draggedCard.setPointerCapture(event.pointerId);
+  draggedCard.style.width = `${cardRect.width}px`;
+  draggedCard.style.position = "fixed";
+  draggedCard.style.left = `${cardRect.left}px`;
+  draggedCard.style.top = `${cardRect.top}px`;
+  draggedCard.style.margin = "0";
+  document.body.appendChild(draggedCard);
 
   document.addEventListener("pointermove", handlePointerMove);
   document.addEventListener("pointerup", handlePointerUp, { once: true });
+  document.addEventListener("pointercancel", handlePointerCancel, { once: true });
 }
 
 function handlePointerMove(event) {
   if (!draggedCard) return;
 
+  positionDraggedCard(event.clientX, event.clientY);
+
   const overSurface = isPointInside(rankSurface, event.clientX, event.clientY);
   const overPool = isPointInside(poolZone, event.clientX, event.clientY);
   rankSurface.classList.toggle("is-active-drop", overSurface);
+  poolZone.classList.toggle("is-active-drop", overPool);
   poolList.classList.toggle("is-active-drop", overPool);
 
-  if (overPool) return;
-
-  if (overSurface || (draggedCard.parentElement === rankSurface && !overPool)) {
-    moveCardToSurface(event.clientX, event.clientY);
+  if (overPool) {
+    updatePoolPlaceholder(event.clientX, event.clientY);
+  } else if (dragOrigin !== "pool") {
+    removePoolPlaceholder();
   }
 }
 
@@ -308,52 +378,134 @@ function handlePointerUp(event) {
   if (!draggedCard) return;
 
   const droppedInPool = isPointInside(poolZone, event.clientX, event.clientY);
-  const droppedInSurface = isPointInside(rankSurface, event.clientX, event.clientY) || draggedCard.parentElement === rankSurface;
+  const droppedInSurface = isPointInside(rankSurface, event.clientX, event.clientY);
   const schoolId = draggedCard.dataset.schoolId;
 
   if (droppedInPool) {
-    moveCardToPool(draggedCard);
-    delete currentState.placed[schoolId];
-    addToPool(schoolId);
+    dropDraggedCardIntoPool();
+    moveSchoolToPool(schoolId);
   } else if (droppedInSurface) {
-    moveCardToSurface(event.clientX, event.clientY);
-    removeFromPool(schoolId);
-    currentState.placed[schoolId] = getPercentPosition(draggedCard);
+    const position = getBoardPositionFromPointer(event.clientX, event.clientY);
+    dropDraggedCardIntoBoard(position);
+    moveSchoolToBoard(schoolId, position.x, position.y);
+  } else {
+    revertDraggedCard();
   }
 
+  endDrag();
+}
+
+function handlePointerCancel() {
+  if (!draggedCard) return;
+  revertDraggedCard();
+  endDrag();
+}
+
+function positionDraggedCard(clientX, clientY) {
+  draggedCard.style.left = `${clientX - dragPointerOffset.x}px`;
+  draggedCard.style.top = `${clientY - dragPointerOffset.y}px`;
+}
+
+function dropDraggedCardIntoBoard(position) {
+  removePoolPlaceholder();
+  clearDragCardStyles(draggedCard);
+  rankSurface.appendChild(draggedCard);
+  placeCard(draggedCard, position.x, position.y);
+}
+
+function dropDraggedCardIntoPool() {
+  ensurePoolPlaceholder();
+  clearDragCardStyles(draggedCard);
+  if (poolPlaceholder.parentElement === poolList) {
+    poolList.insertBefore(draggedCard, poolPlaceholder);
+  } else {
+    poolList.appendChild(draggedCard);
+  }
+  removePoolPlaceholder();
+}
+
+function revertDraggedCard() {
+  const schoolId = draggedCard.dataset.schoolId;
+  if (dragOrigin === "surface" && dragStartPosition) {
+    dropDraggedCardIntoBoard(dragStartPosition);
+    moveSchoolToBoard(schoolId, dragStartPosition.x, dragStartPosition.y);
+    return;
+  }
+
+  dropDraggedCardIntoPool();
+  moveSchoolToPool(schoolId);
+}
+
+function endDrag() {
   draggedCard.classList.remove("is-dragging");
   rankSurface.classList.remove("is-active-drop");
+  poolZone.classList.remove("is-active-drop");
   poolList.classList.remove("is-active-drop");
+  removePoolPlaceholder();
+  document.removeEventListener("pointermove", handlePointerMove);
+  document.removeEventListener("pointerup", handlePointerUp);
+  document.removeEventListener("pointercancel", handlePointerCancel);
   draggedCard = null;
   dragOrigin = null;
-  saveState();
+  dragStartPosition = null;
 }
 
-function moveCardToSurface(pointerX, pointerY) {
-  if (draggedCard.parentElement !== rankSurface) {
-    rankSurface.appendChild(draggedCard);
-  }
-
-  const surfaceRect = rankSurface.getBoundingClientRect();
-  const cardRect = draggedCard.getBoundingClientRect();
-  const left = pointerX - surfaceRect.left - dragPointerOffset.x;
-  const top = pointerY - surfaceRect.top - dragPointerOffset.y;
-  const maxLeft = surfaceRect.width - cardRect.width - EDGE_PADDING;
-  const maxTop = surfaceRect.height - cardRect.height - EDGE_PADDING;
-
-  draggedCard.style.left = `${clamp(left, EDGE_PADDING, Math.max(EDGE_PADDING, maxLeft))}px`;
-  draggedCard.style.top = `${clamp(top, EDGE_PADDING, Math.max(EDGE_PADDING, maxTop))}px`;
-}
-
-function moveCardToPool(card) {
+function clearDragCardStyles(card) {
+  card.style.position = "";
+  card.style.width = "";
+  card.style.margin = "";
   card.style.left = "";
   card.style.top = "";
-  poolList.appendChild(card);
 }
 
 function isPointInside(element, x, y) {
   const rect = element.getBoundingClientRect();
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function ensurePoolPlaceholder() {
+  if (poolPlaceholder) return;
+  poolPlaceholder = document.createElement("div");
+  poolPlaceholder.className = "school-placeholder";
+  poolPlaceholder.setAttribute("aria-hidden", "true");
+}
+
+function updatePoolPlaceholder(pointerX, pointerY) {
+  ensurePoolPlaceholder();
+  const nextCard = getPoolInsertBeforeCard(pointerX, pointerY);
+  if (nextCard) {
+    poolList.insertBefore(poolPlaceholder, nextCard);
+  } else {
+    poolList.appendChild(poolPlaceholder);
+  }
+}
+
+function removePoolPlaceholder() {
+  poolPlaceholder?.remove();
+}
+
+function getPoolInsertBeforeCard(pointerX, pointerY) {
+  const cards = Array.from(poolList.querySelectorAll(".school-card")).filter((card) => card !== draggedCard);
+  return cards.find((card) => {
+    const rect = card.getBoundingClientRect();
+    const aboveMiddle = pointerY < rect.top + rect.height / 2;
+    const sameRowBeforeMiddle = pointerY <= rect.bottom && pointerY >= rect.top && pointerX < rect.left + rect.width / 2;
+    return aboveMiddle || sameRowBeforeMiddle;
+  });
+}
+
+function getBoardPositionFromPointer(pointerX, pointerY) {
+  const surfaceRect = rankSurface.getBoundingClientRect();
+  const cardRect = draggedCard.getBoundingClientRect();
+  const maxLeft = Math.max(EDGE_PADDING, surfaceRect.width - cardRect.width - EDGE_PADDING);
+  const maxTop = Math.max(EDGE_PADDING, surfaceRect.height - cardRect.height - EDGE_PADDING);
+  const left = clamp(pointerX - surfaceRect.left - dragPointerOffset.x, EDGE_PADDING, maxLeft);
+  const top = clamp(pointerY - surfaceRect.top - dragPointerOffset.y, EDGE_PADDING, maxTop);
+
+  return {
+    x: Math.round((left / maxLeft) * 1000) / 10,
+    y: Math.round((top / maxTop) * 1000) / 10,
+  };
 }
 
 function placeCard(card, xPercent, yPercent) {
@@ -366,26 +518,27 @@ function placeCard(card, xPercent, yPercent) {
   card.style.top = `${clamp((yPercent / 100) * maxTop, EDGE_PADDING, maxTop)}px`;
 }
 
-function getPercentPosition(card) {
-  const surfaceRect = rankSurface.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
-  const left = Number.parseFloat(card.style.left) || EDGE_PADDING;
-  const top = Number.parseFloat(card.style.top) || EDGE_PADDING;
-  const maxLeft = Math.max(EDGE_PADDING, surfaceRect.width - cardRect.width - EDGE_PADDING);
-  const maxTop = Math.max(EDGE_PADDING, surfaceRect.height - cardRect.height - EDGE_PADDING);
-
-  return {
-    x: Math.round((left / maxLeft) * 1000) / 10,
-    y: Math.round((top / maxTop) * 1000) / 10,
-  };
-}
-
-function addToPool(schoolId) {
-  if (!currentState.pool.includes(schoolId)) currentState.pool.push(schoolId);
-}
-
-function removeFromPool(schoolId) {
+function moveSchoolToBoard(schoolId, x, y) {
   currentState.pool = currentState.pool.filter((id) => id !== schoolId);
+  currentState.placed[schoolId] = {
+    x: clamp(Number(x) || 0, 0, 100),
+    y: clamp(Number(y) || 0, 0, 100),
+  };
+  saveState();
+}
+
+function moveSchoolToPool(schoolId) {
+  delete currentState.placed[schoolId];
+  syncPoolOrderFromDom();
+  if (!currentState.pool.includes(schoolId)) currentState.pool.push(schoolId);
+  saveState();
+}
+
+function syncPoolOrderFromDom() {
+  const idsInDom = Array.from(poolList.querySelectorAll(".school-card")).map((card) => card.dataset.schoolId);
+  const idsInDomSet = new Set(idsInDom);
+  const remainingPoolIds = currentState.pool.filter((schoolId) => !idsInDomSet.has(schoolId));
+  currentState.pool = [...idsInDom, ...remainingPoolIds].filter((schoolId) => !currentState.placed[schoolId]);
 }
 
 function resetRanking() {
