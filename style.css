@@ -462,6 +462,57 @@ h3 {
   gap: 12px;
 }
 
+.live-ticker {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  width: min(360px, calc(100vw - 48px));
+  height: 46px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffe600, #ffb703, #ff6b35);
+  box-shadow: 0 10px 26px rgba(126, 34, 0, 0.22);
+}
+
+body.live-mode .live-ticker {
+  display: flex;
+}
+
+.ticker-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  white-space: nowrap;
+  animation: tickerScroll 14s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track span {
+  flex: 0 0 auto;
+  padding: 0 28px;
+  color: #1f1f1f;
+  font-size: 22px;
+  font-weight: 1000;
+  line-height: 46px;
+}
+
+.live-ticker:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes tickerScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .icon-close {
   width: 40px;
   height: 40px;
