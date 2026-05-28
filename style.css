@@ -165,6 +165,21 @@ h3 {
   padding: 2px 4px 0;
 }
 
+.canvas-title-group {
+  min-width: 0;
+}
+
+.headline-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.headline-row h2 {
+  flex: 0 0 auto;
+}
+
 .save-status {
   align-self: center;
   padding: 9px 14px;
@@ -463,14 +478,12 @@ h3 {
 }
 
 .live-ticker {
-  position: fixed;
-  top: clamp(82px, 8.3vh, 118px);
-  right: max(36px, calc((100vw - 1880px) / 2 + 42px));
-  z-index: 10000;
+  position: relative;
+  z-index: 10;
   display: none;
   align-items: center;
-  width: min(520px, calc(100vw - 72px));
-  height: 60px;
+  width: min(500px, 32vw);
+  height: 54px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 999px;
@@ -495,9 +508,9 @@ body.live-mode .live-ticker {
   flex: 0 0 auto;
   padding: 0 36px;
   color: #1f1f1f;
-  font-size: clamp(26px, 1.65vw, 34px);
+  font-size: clamp(25px, 1.5vw, 32px);
   font-weight: 1000;
-  line-height: 60px;
+  line-height: 54px;
 }
 
 .live-ticker:hover .ticker-track {
@@ -600,10 +613,12 @@ body.live-mode .live-ticker {
   }
 
   .live-ticker {
-    top: 16px;
-    right: 16px;
-    width: min(460px, calc(100vw - 32px));
+    width: min(460px, 100%);
     height: 56px;
+  }
+
+  .headline-row {
+    flex-wrap: wrap;
   }
 
   .ticker-track span {
