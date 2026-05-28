@@ -51,6 +51,16 @@ const schools = [
   { id: "nuist", shortName: "南信大", fullName: "南京信息工程大学", logo: "assets/logos/nuist.png" },
   { id: "nbu", shortName: "宁大", fullName: "宁波大学", logo: "assets/logos/nbu.png" },
   { id: "cuit", shortName: "成信大", fullName: "成都信息工程大学", logo: "assets/logos/cuit.png" },
+  { id: "neu", shortName: "东北大", fullName: "东北大学", logo: "assets/logos/neu.png" },
+  { id: "dut", shortName: "大工", fullName: "大连理工大学", logo: "assets/logos/dut.png" },
+  { id: "xmu", shortName: "厦大", fullName: "厦门大学", logo: "assets/logos/xmu.png" },
+  { id: "ecnu", shortName: "华东师", fullName: "华东师范大学", logo: "assets/logos/ecnu.png" },
+  { id: "shu", shortName: "上大", fullName: "上海大学", logo: "assets/logos/shu.png" },
+  { id: "ncepu", shortName: "华电", fullName: "华北电力大学", logo: "assets/logos/ncepu.png" },
+  { id: "tyut", shortName: "太理", fullName: "太原理工大学", logo: "assets/logos/tyut.png" },
+  { id: "cug", shortName: "地大", fullName: "中国地质大学", logo: "assets/logos/cug.png" },
+  { id: "sustech", shortName: "南科大", fullName: "南方科技大学", logo: "assets/logos/sustech.png" },
+  { id: "gdut", shortName: "广工", fullName: "广东工业大学", logo: "assets/logos/gdut.png" },
 ];
 
 const STORAGE_KEY = "ee-school-logo-precision-ranking-v2";
